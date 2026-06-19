@@ -1,0 +1,134 @@
+# @package _global_
+
+dataset_base_path: "/home/ayoun_ocr_competition/data/datasets/"   # Change your path
+
+datasets:
+  train_dataset:
+    _target_: ${dataset_path}.OCRDataset
+    image_path: ${dataset_base_path}images/train
+    annotation_path: ${dataset_base_path}jsons/train.json
+    transform: ${transforms.train_transform}
+  val_dataset:
+    _target_: ${dataset_path}.OCRDataset
+    image_path: ${dataset_base_path}images/val
+    annotation_path: ${dataset_base_path}jsons/val.json
+    transform: ${transforms.val_transform}
+  test_dataset:
+    _target_: ${dataset_path}.OCRDataset
+    image_path: ${dataset_base_path}images/val
+    annotation_path: ${dataset_base_path}jsons/val.json
+    transform: ${transforms.test_transform}
+  predict_dataset:
+    _target_: ${dataset_path}.OCRDataset
+    image_path: ${dataset_base_path}images/test
+    annotation_path: null
+    transform: ${transforms.test_transform}
+
+transforms:
+  train_transform:
+    _target_: ${dataset_path}.DBTransforms
+    transforms:
+      - _target_: albumentations.LongestMaxSize
+        max_size: 1024
+        p: 1.0
+      - _target_: albumentations.PadIfNeeded
+        min_width: 1024
+        min_height: 1024
+        border_mode: 0
+        p: 1.0
+      - _target_: albumentations.HorizontalFlip  
+        p: 0.2
+      # 촬영 밝기 차이 대응 (FP 케이스에 플래시 반사 다수)
+      - _target_: albumentations.RandomBrightnessContrast
+        brightness_limit: 0.15  # 범위 줄임 (0.2 → 0.15)
+        contrast_limit: 0.15
+        p: 0.3
+      # 빛 번짐 / 오염 케이스 대응 - p 낮게, blur_limit 작게
+      - _target_: albumentations.GaussianBlur
+        blur_limit: [3, 3]   # 최소값으로 고정 (3,7 → 3,3)
+        p: 0.15              # p 대폭 낮춤 (0.4 → 0.15)
+      - _target_: albumentations.Normalize       
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+    keypoint_params:
+      _target_: albumentations.KeypointParams
+      format: 'xy'
+      remove_invisible: True
+      
+  val_transform:
+    _target_: ${dataset_path}.DBTransforms
+    transforms:
+      - _target_: albumentations.LongestMaxSize
+        max_size: 1024
+        p: 1.0
+      - _target_: albumentations.PadIfNeeded
+        min_width: 1024
+        min_height: 1024
+        border_mode: 0
+        p: 1.0
+      - _target_: albumentations.Normalize
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+    keypoint_params:
+      _target_: albumentations.KeypointParams
+      format: 'xy'
+      remove_invisible: True
+
+  test_transform:
+    _target_: ${dataset_path}.DBTransforms
+    transforms:
+      - _target_: albumentations.LongestMaxSize
+        max_size: 1024
+        p: 1.0
+      - _target_: albumentations.PadIfNeeded
+        min_width: 1024
+        min_height: 1024
+        border_mode: 0
+        p: 1.0
+      - _target_: albumentations.Normalize
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+    keypoint_params:
+      _target_: albumentations.KeypointParams
+      format: 'xy'
+      remove_invisible: True
+
+  predict_transform:
+    _target_: ${dataset_path}.DBTransforms
+    transforms:
+      - _target_: albumentations.LongestMaxSize
+        max_size: 1024
+        p: 1.0
+      - _target_: albumentations.PadIfNeeded
+        min_width: 1024
+        min_height: 1024
+        border_mode: 0
+        p: 1.0
+      - _target_: albumentations.Normalize
+        mean: [0.485, 0.456, 0.406]
+        std: [0.229, 0.224, 0.225]
+    keypoint_params: null
+
+dataloaders:
+  train_dataloader:
+    batch_size: 4
+    shuffle: True
+    num_workers: 4
+  val_dataloader:
+    batch_size: 4
+    shuffle: False
+    num_workers: 4
+  test_dataloader:
+    batch_size: 4
+    shuffle: False
+    num_workers: 4
+  predict_dataloader:
+    batch_size: 1
+    shuffle: False
+    num_workers: 4
+
+collate_fn:
+  _target_: ${dataset_path}.DBCollateFN
+  shrink_ratio: 0.4
+  thresh_min: 0.3
+  thresh_max: 0.7
