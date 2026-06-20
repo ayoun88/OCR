@@ -8,7 +8,7 @@ from lightning.pytorch.callbacks import (  # noqa
 )
 
 sys.path.append(os.getcwd())
-from ocr.lightning_modules import get_pl_modules_by_cfg  # noqa: E402
+from OCR.src.ocr.lightning_modules import get_pl_modules_by_cfg  # noqa: E402
 
 CONFIG_DIR = os.environ.get('OP_CONFIG_DIR') or '../configs'
 
